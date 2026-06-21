@@ -1,7 +1,7 @@
 /**
-* Create by Miguel Ángel López on 20/07/19
-* and modify by xaxexa
-* Refactoring & component making:
+* Erstellt von Miguel Ángel López am 20.07.19
+* und geändert von xaxexa
+* Refactoring und Komponentenerstellung:
 * Соловей с паяльником 15.03.2024
 **/
 
@@ -31,7 +31,7 @@ namespace tclac {
 #define FAN_QUIET_POS	33
 
 #define FAN_AUTO		0b10000000	//auto
-#define FAN_QUIET		0x80		//silent
+#define FAN_QUIET		0x80		//leise
 #define FAN_LOW			0b10010000	//	|
 #define FAN_MIDDLE		0b11000000	//	||
 #define FAN_MEDIUM		0b10100000	//	|||
@@ -86,13 +86,13 @@ class tclacClimate : public climate::Climate, public esphome::uart::UARTDevice, 
 
 	private:
 		uint8_t checksum;
-		// dataTX с управлением состоит из 38 байт
+		// dataTX mit Steuerdaten besteht aus 38 Bytes
 		uint8_t dataTX[38];
-		// А dataRX по прежнему из 61 байта
+		// dataRX besteht weiterhin aus 61 Bytes
 		uint8_t dataRX[61];
-		// Команда запроса состояния
+		// Statusabfrage-Befehl
 		uint8_t poll[8] = {0xBB,0x00,0x01,0x04,0x02,0x01,0x00,0xBD};
-		// Инициализация и начальное наполнение переменных состоянй переключателей
+		// Initialisierung und Anfangswerte der Schalterzustandsvariablen
 		bool beeper_status_;
 		bool display_status_;
 		bool force_mode_status_;
