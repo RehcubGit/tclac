@@ -1,7 +1,7 @@
 /**
-* Create by Miguel Ángel López on 20/07/19
-* and modify by xaxexa
-* Refactoring & component making:
+* Erstellt von Miguel Ángel López am 20.07.19
+* und geändert von xaxexa
+* Refactoring und Komponentenerstellung:
 * Соловей с паяльником 15.03.2024
 **/
 #include "esphome.h"
@@ -16,7 +16,7 @@ ClimateTraits tclacClimate::traits() {
 	auto traits = climate::ClimateTraits();
 	traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
 	
-	// Ответственно заявляю, что это все я взял у christoph5180
+	// Hiermit erkläre ich verantwortungsvoll, dass ich das alles von christoph5180 übernommen habe
 	if (this->supported_modes_.empty()) {
 		traits.add_supported_mode(climate::CLIMATE_MODE_OFF);
 		traits.add_supported_mode(climate::CLIMATE_MODE_AUTO);
@@ -60,55 +60,50 @@ void tclacClimate::setup() {
 }
 
 void tclacClimate::loop()  {
-	// Если в буфере UART что-то есть, то читаем это что-то
-	if (esphome::uart::UARTDevice::available() > 0) {
-		dataShow(0, true);
-		dataRX[0] = esphome::uart::UARTDevice::read();
-		// Если принятый байт- не заголовок (0xBB), то просто покидаем цикл
-		if (dataRX[0] != 0xBB) {
-			ESP_LOGD("TCL", "Wrong byte: %x", dataRX[0]);
-			dataShow(0,0);
-			return;
-		}
-		// А вот если совпал заголовок (0xBB), то начинаем чтение по цепочке еще 4 байт
-		// Иногда, для некоторых кондиционеров все же нужно добавить delay(5) между пакетами. Зачем- ХЗ, но так надо. Но не всегда. Хотя иногда- да. Но не каждый раз. Изредка. Случается.
-		// delay(5);
-		dataRX[1] = esphome::uart::UARTDevice::read();
-		// delay(5);
-		dataRX[2] = esphome::uart::UARTDevice::read();
-		// delay(5);
-		dataRX[3] = esphome::uart::UARTDevice::read();
-		// delay(5);
-		dataRX[4] = esphome::uart::UARTDevice::read();
+	// Wenn sich etwas im UART-Puffer befindet, lesen wir es aus
+	if (esphome::uart::UARTDevice::available() <= 0) 
+		return;
 
-		auto raw = getHex(dataRX, 5);
-		
-		ESP_LOGD("TCL", "first 5 byte : %s ", raw.c_str());
+	dataShow(0, true);
 
-		// Logging the message
+	dataRX[0] = esphome::uart::UARTDevice::read();
+	ESP_LOGD("TCL", "Message received: %x", dataRX[0]);
 
-
-		// Из первых 5 байт нам нужен пятый- он содержит длину сообщения
-		esphome::uart::UARTDevice::read_array(dataRX+5, dataRX[4]+1);
-
-		uint8_t check = getChecksum(dataRX, sizeof(dataRX));
-
-		//raw = getHex(dataRX, sizeof(dataRX));
-		
-		//ESP_LOGD("TCL", "RX full : %s ", raw.c_str());
-		
-		// Проверяем контрольную сумму
-		if (check != dataRX[60]) {
-			ESP_LOGD("TCL", "Invalid checksum %x", check);
-			this->dataShow(0,0);
-			return;
-		} else {
-			//ESP_LOGD("TCL", "checksum OK %x", check);
-		}
-		this->dataShow(0,0);
-		// Прочитав все из буфера приступаем к разбору данных
-		this->readData();
+	// Wenn das empfangene Byte kein Header ist (0xBB), verlassen wir die Schleife
+	if (dataRX[0] != 0xBB) {
+		ESP_LOGD("TCL", "Wrong byte");
+		dataShow(0,0);
+		return;
 	}
+	// Wenn der Header (0xBB) passt, lesen wir anschließend weitere 4 Bytes
+	// Bei manchen Klimaanlagen muss zwischen Paketen delay(5) gesetzt werden. Warum unklar, aber gelegentlich notwendig.
+	// delay(5);
+	dataRX[1] = esphome::uart::UARTDevice::read();
+	// delay(5);
+	dataRX[2] = esphome::uart::UARTDevice::read();
+	// delay(5);
+	dataRX[3] = esphome::uart::UARTDevice::read();
+	// delay(5);
+	dataRX[4] = esphome::uart::UARTDevice::read();
+
+	// Von den ersten 5 Bytes benötigen wir das fünfte: Es enthält die Nachrichtenlänge
+	esphome::uart::UARTDevice::read_array(dataRX+5, dataRX[4]+1);
+
+	uint8_t check = getChecksum(dataRX, sizeof(dataRX));
+
+	raw = getHex(dataRX, sizeof(dataRX));	
+	ESP_LOGD("TCL", "RX full : %s ", raw.c_str());
+	
+	// Prüfen der Prüfsumme
+	if (check != dataRX[60]) {
+		ESP_LOGD("TCL", "Invalid checksum %x", check);
+		this->dataShow(0,0);
+		return;
+	}
+
+	this->dataShow(0,0);
+	// Nach dem vollständigen Lesen des Puffers beginnen wir mit dem Parsen
+	this->readData();
 }
 
 void tclacClimate::update() {
@@ -127,7 +122,7 @@ void tclacClimate::readData() {
 	//ESP_LOGD("TCL", "TEMP: %f ", current_temperature);
 
 	if (dataRX[MODE_POS] & ( 1 << 4)) {
-		// Если кондиционер включен, то разбираем данные для отображения
+		// Wenn die Klimaanlage eingeschaltet ist, bereiten wir die Daten zur Anzeige auf
 		ESP_LOGD("TCL", "AC is on");
 		uint8_t modeswitch = MODE_MASK & dataRX[MODE_POS];
 		uint8_t fanspeedswitch = FAN_SPEED_MASK & dataRX[FAN_SPEED_POS];
@@ -197,7 +192,7 @@ void tclacClimate::readData() {
 				break;
 		}
 		
-		// Обработка данных о пресете
+		// Verarbeiten der Preset-Daten
 		preset = ClimatePreset::CLIMATE_PRESET_NONE;
 		if (dataRX[7] & (1 << 6)){
 			preset = ClimatePreset::CLIMATE_PRESET_ECO;
@@ -209,23 +204,23 @@ void tclacClimate::readData() {
 		
 	} else {
 		ESP_LOGD("TCL", "AC is OFF");
-		// Если кондиционер выключен, то все режимы показываются, как выключенные
+		// Wenn die Klimaanlage aus ist, werden alle Modi als aus dargestellt
 		this->mode = climate::CLIMATE_MODE_OFF;
 		//fan_mode = climate::CLIMATE_FAN_OFF;
 		this->swing_mode = climate::CLIMATE_SWING_OFF;
 		this->preset = ClimatePreset::CLIMATE_PRESET_NONE;
 	}
-	// Публикуем данные
+	// Zustand veröffentlichen
 	this->publish_state();
 	allow_take_control = true;
    }
 
-// Climate control
+// Klimasteuerung
 void tclacClimate::control(const climate::ClimateCall &call) {
 	
 	ESP_LOGD("TCL", "Call from UI");
 	
-	// А это и ниже я подрезал у Vi3jo.
+	// Dies und den folgenden Teil habe ich von Vi3jo übernommen.
 	
 	if (call.get_mode().has_value()) this->mode = *call.get_mode();
     if (call.get_target_temperature().has_value()) this->target_temperature = *call.get_target_temperature();
@@ -252,7 +247,7 @@ void tclacClimate::takeControl() {
 	
 	uint8_t target_temperature_set = 31-(int)target_temperature;
 	
-	// Включаем или отключаем пищалку в зависимости от переключателя в настройках
+	// Summer je nach Schalter in den Einstellungen ein- oder ausschalten
 	if (beeper_status_){
 		ESP_LOGD("TCL", "Beep mode ON");
 		dataTX[7] += 0b00100000;
@@ -261,10 +256,10 @@ void tclacClimate::takeControl() {
 		dataTX[7] += 0b00000000;
 	}
 	
-	// Включаем или отключаем дисплей на кондиционере в зависимости от переключателя в настройках
-	// Включаем дисплей только если кондиционер в одном из рабочих режимов
+	// Display der Klimaanlage je nach Schalter in den Einstellungen ein- oder ausschalten
+	// Das Display wird nur eingeschaltet, wenn die Anlage in einem Betriebsmodus ist
 	
-	// ВНИМАНИЕ! При выключении дисплея кондиционер сам принудительно переходит в автоматический режим!
+	// ACHTUNG! Beim Ausschalten des Displays wechselt die Klimaanlage erzwungen in den Automatikmodus!
 	
 	if ((display_status_) && (mode != climate::CLIMATE_MODE_OFF)){
 		ESP_LOGD("TCL", "Dispaly turn ON");
@@ -274,7 +269,7 @@ void tclacClimate::takeControl() {
 		dataTX[7] += 0b00000000;
 	}
 		
-	// Настраиваем режим работы кондиционера
+	// Betriebsmodus der Klimaanlage einstellen
 	switch (this->mode) {
 		case climate::CLIMATE_MODE_OFF:
 			dataTX[7] += 0b00000000;
@@ -302,7 +297,7 @@ void tclacClimate::takeControl() {
 			break;
 	}
 
-	// Настраиваем режим вентилятора
+	// Lüftermodus einstellen
 	if (this->fan_mode.has_value()) {
 		switch(*this->fan_mode) {
 			case climate::CLIMATE_FAN_AUTO:
@@ -340,7 +335,7 @@ void tclacClimate::takeControl() {
 		}
 	}
 	
-	// Устанавливаем режим качания заслонок
+	// Swing-Modus der Lamellen einstellen
 	switch(this->swing_mode) {
 		case climate::CLIMATE_SWING_OFF:
 			dataTX[10]	+= 0b00000000;
@@ -360,7 +355,7 @@ void tclacClimate::takeControl() {
 			break;
 	}
 	
-	// Устанавливаем предустановки кондиционера
+	// Presets der Klimaanlage einstellen
 	if (this->preset.has_value()) {
 		switch(*this->preset) {
 			case ClimatePreset::CLIMATE_PRESET_NONE:
@@ -377,41 +372,41 @@ void tclacClimate::takeControl() {
 		}
 	}
 
-        //Режим заслонок
-		//	Вертикальная заслонка
-		//		Качание вертикальной заслонки [10 байт, маска 00111000]:
-		//			000 - Качание отключено, заслонка в последней позиции или в фиксации
-		//			111 - Качание включено в выбранном режиме
-		//		Режим качания вертикальной заслонки (режим фиксации заслонки роли не играет, если качание включено) [32 байт, маска 00011000]:
-		//			01 - качание сверху вниз, ПО УМОЛЧАНИЮ
-		//			10 - качание в верхней половине
-		//			11 - качание в нижней половине
-		//		Режим фиксации заслонки (режим качания заслонки роли не играет, если качание выключено) [32 байт, маска 00000111]:
-		//			000 - нет фиксации, ПО УМОЛЧАНИЮ
-		//			001 - фиксация вверху
-		//			010 - фиксация между верхом и серединой
-		//			011 - фиксация в середине
-		//			100 - фиксация между серединой и низом
-		//			101 - фиксация внизу
-		//	Горизонтальные заслонки
-		//		Качание горизонтальных заслонок [11 байт, маска 00001000]:
-		//			0 - Качание отключено, заслонки в последней позиции или в фиксации
-		//			1 - Качание включено в выбранном режиме
-		//		Режим качания горизонтальных заслонок (режим фиксации заслонок роли не играет, если качание включено) [33 байт, маска 00111000]:
-		//			001 - качание слева направо, ПО УМОЛЧАНИЮ
-		//			010 - качание слева
-		//			011 - качание по середине
-		//			100 - качание справа
-		//		Режим фиксации горизонтальных заслонок (режим качания заслонок роли не играет, если качание выключено) [33 байт, маска 00000111]:
-		//			000 - нет фиксации, ПО УМОЛЧАНИЮ
-		//			001 - фиксация слева
-		//			010 - фиксация между левой стороной и серединой
-		//			011 - фиксация в середине
-		//			100 - фиксация между серединой и правой стороной
-		//			101 - фиксация справа
+        // Lamellenmodi
+		//	Vertikale Lamelle
+		//		Swing der vertikalen Lamelle [Byte 10, Maske 00111000]:
+		//			000 - Swing aus, Lamelle in letzter Position oder fixiert
+		//			111 - Swing im gewählten Modus aktiv
+		//		Swing-Modus der vertikalen Lamelle (Fixiermodus ist ohne Bedeutung, wenn Swing aktiv ist) [Byte 32, Maske 00011000]:
+		//			01 - Swing von oben nach unten, STANDARD
+		//			10 - Swing in der oberen Hälfte
+		//			11 - Swing in der unteren Hälfte
+		//		Fixiermodus der Lamelle (Swing-Modus ist ohne Bedeutung, wenn Swing aus ist) [Byte 32, Maske 00000111]:
+		//			000 - keine Fixierung, STANDARD
+		//			001 - oben fixiert
+		//			010 - zwischen oben und Mitte fixiert
+		//			011 - in der Mitte fixiert
+		//			100 - zwischen Mitte und unten fixiert
+		//			101 - unten fixiert
+		//	Horizontale Lamellen
+		//		Swing der horizontalen Lamellen [Byte 11, Maske 00001000]:
+		//			0 - Swing aus, Lamellen in letzter Position oder fixiert
+		//			1 - Swing im gewählten Modus aktiv
+		//		Swing-Modus der horizontalen Lamellen (Fixiermodus ist ohne Bedeutung, wenn Swing aktiv ist) [Byte 33, Maske 00111000]:
+		//			001 - Swing von links nach rechts, STANDARD
+		//			010 - Swing links
+		//			011 - Swing mittig
+		//			100 - Swing rechts
+		//		Fixiermodus der horizontalen Lamellen (Swing-Modus ist ohne Bedeutung, wenn Swing aus ist) [Byte 33, Maske 00000111]:
+		//			000 - keine Fixierung, STANDARD
+		//			001 - links fixiert
+		//			010 - zwischen linker Seite und Mitte fixiert
+		//			011 - in der Mitte fixiert
+		//			100 - zwischen Mitte und rechter Seite fixiert
+		//			101 - rechts fixiert
 		
 		
-	// Устанавливаем режим для качания вертикальной заслонки
+	// Modus für den Swing der vertikalen Lamelle einstellen
 	switch(vertical_swing_direction_) {
 		case VerticalSwingDirection::UP_DOWN:
 			dataTX[32]	+= 0b00001000;
@@ -426,7 +421,7 @@ void tclacClimate::takeControl() {
 			ESP_LOGD("TCL", "Vertical swing: downer");
 			break;
 	}
-	// Устанавливаем режим для качания горизонтальных заслонок
+	// Modus für den Swing der horizontalen Lamellen einstellen
 	switch(horizontal_swing_direction_) {
 		case HorizontalSwingDirection::LEFT_RIGHT:
 			dataTX[33]	+= 0b00001000;
@@ -445,7 +440,7 @@ void tclacClimate::takeControl() {
 			ESP_LOGD("TCL", "Horizontal swing: righter");
 			break;
 	}
-	// Устанавливаем положение фиксации вертикальной заслонки
+	// Fixierposition der vertikalen Lamelle einstellen
 	switch(vertical_direction_) {
 		case AirflowVerticalDirection::LAST:
 			dataTX[32]	+= 0b00000000;
@@ -472,7 +467,7 @@ void tclacClimate::takeControl() {
 			ESP_LOGD("TCL", "Vertical fix: down");
 			break;
 	}
-	// Устанавливаем положение фиксации горизонтальных заслонок
+	// Fixierposition der horizontalen Lamellen einstellen
 	switch(horizontal_direction_) {
 		case AirflowHorizontalDirection::LAST:
 			dataTX[33]	+= 0b00000000;
@@ -500,30 +495,30 @@ void tclacClimate::takeControl() {
 			break;
 	}
 
-	// Установка температуры
+	// Temperatur einstellen
 	dataTX[9] = target_temperature_set;
 		
-	// Собираем массив байт для отправки в кондиционер
-	dataTX[0] = 0xBB;	//стартовый байт заголовка
-	dataTX[1] = 0x00;	//стартовый байт заголовка
-	dataTX[2] = 0x01;	//стартовый байт заголовка
-	dataTX[3] = 0x03;	//0x03 - управление, 0x04 - опрос
-	dataTX[4] = 0x20;	//0x20 - управление, 0x19 - опрос
+	// Byte-Array für das Senden an die Klimaanlage zusammenbauen
+	dataTX[0] = 0xBB;	// Start-Header-Byte
+	dataTX[1] = 0x00;	// Start-Header-Byte
+	dataTX[2] = 0x01;	// Start-Header-Byte
+	dataTX[3] = 0x03;	// 0x03 - Steuerung, 0x04 - Abfrage
+	dataTX[4] = 0x20;	// 0x20 - Steuerung, 0x19 - Abfrage
 	dataTX[5] = 0x03;	//??
 	dataTX[6] = 0x01;	//??
-	//dataTX[7] = 0x64;	//eco,display,beep,ontimerenable, offtimerenable,power,0,0
-	//dataTX[8] = 0x08;	//mute,0,turbo,health, mode(4) mode 01 heat, 02 dry, 03 cool, 07 fan, 08 auto, health(+16), 41=turbo-heat 43=turbo-cool (turbo = 0x40+ 0x01..0x08)
-	//dataTX[9] = 0x0f;	//0 -31 ;    15 - 16 0,0,0,0, temp(4) settemp 31 - x
-	//dataTX[10] = 0x00;	//0,timerindicator,swingv(3),fan(3) fan+swing modes //0=auto 1=low 2=med 3=high
+	//dataTX[7] = 0x64;	// eco, display, beep, ontimerenable, offtimerenable, power,0,0
+	//dataTX[8] = 0x08;	// mute,0,turbo,health, mode(4): 01 heat, 02 dry, 03 cool, 07 fan, 08 auto, health(+16), 41=turbo-heat, 43=turbo-cool (turbo = 0x40 + 0x01..0x08)
+	//dataTX[9] = 0x0f;	// 0-31; 15 entspricht 16 Grad; 0,0,0,0,temp(4), settemp 31 - x
+	//dataTX[10] = 0x00;	// 0,timerindicator,swingv(3),fan(3) fan+swing modes //0=auto 1=low 2=med 3=high
 	//dataTX[11] = 0x00;	//0,offtimer(6),0
-	dataTX[12] = 0x00;	//fahrenheit,ontimer(6),0 cf 80=f 0=c
+	dataTX[12] = 0x00;	// fahrenheit,ontimer(6),0; cf 80=f 0=c
 	dataTX[13] = 0x01;	//??
 	dataTX[14] = 0x00;	//0,0,halfdegree,0,0,0,0,0
 	dataTX[15] = 0x00;	//??
 	dataTX[16] = 0x00;	//??
 	dataTX[17] = 0x00;	//??
 	dataTX[18] = 0x00;	//??
-	//dataTX[19] = 0x00;	//sleep on = 1 off=0
+	//dataTX[19] = 0x00;	// sleep ein = 1, aus = 0
 	dataTX[20] = 0x00;	//??
 	dataTX[21] = 0x00;	//??
 	dataTX[22] = 0x00;	//??
@@ -535,12 +530,12 @@ void tclacClimate::takeControl() {
 	dataTX[28] = 0x00;	//??
 	dataTX[30] = 0x00;	//??
 	dataTX[31] = 0x00;	//??
-	//dataTX[32] = 0x00;	//0,0,0,режим вертикального качания(2),режим вертикальной фиксации(3)
-	//dataTX[33] = 0x00;	//0,0,режим горизонтального качания(3),режим горизонтальной фиксации(3)
+	//dataTX[32] = 0x00;	// 0,0,0,vertikaler Swing-Modus(2),vertikaler Fixiermodus(3)
+	//dataTX[33] = 0x00;	// 0,0,horizontaler Swing-Modus(3),horizontaler Fixiermodus(3)
 	dataTX[34] = 0x00;	//??
 	dataTX[35] = 0x00;	//??
 	dataTX[36] = 0x00;	//??
-	dataTX[37] = 0xFF;	//Контрольная сумма
+	dataTX[37] = 0xFF;	// Prüfsumme
 	dataTX[37] = tclacClimate::getChecksum(dataTX, sizeof(dataTX));
 
 	tclacClimate::sendData(dataTX, sizeof(dataTX));
@@ -548,7 +543,7 @@ void tclacClimate::takeControl() {
 	is_call_control = false;
 }
 
-// Отправка данных в кондиционер
+// Daten an die Klimaanlage senden
 void tclacClimate::sendData(uint8_t * message, uint8_t size) {
 	tclacClimate::dataShow(1,1);
 	//Serial.write(message, size);
@@ -558,7 +553,7 @@ void tclacClimate::sendData(uint8_t * message, uint8_t size) {
 	tclacClimate::dataShow(1,0);
 }
 
-// Преобразование байта в читабельный формат
+// Byte in ein lesbares Format umwandeln
 String tclacClimate::getHex(uint8_t *message, uint8_t size) {
 	String raw;
 	for (int i = 0; i < size; i++) {
@@ -568,7 +563,7 @@ String tclacClimate::getHex(uint8_t *message, uint8_t size) {
 	return raw;
 }
 
-// Вычисление контрольной суммы
+// Prüfsumme berechnen
 uint8_t tclacClimate::getChecksum(const uint8_t * message, size_t size) {
 	uint8_t position = size - 1;
 	uint8_t crc = 0;
@@ -577,7 +572,7 @@ uint8_t tclacClimate::getChecksum(const uint8_t * message, size_t size) {
 	return crc;
 }
 
-// Мигаем светодиодами
+// LEDs blinken lassen
 void tclacClimate::dataShow(bool flow, bool shine) {
 	if (module_display_status_){
 		if (flow == 0){
@@ -605,9 +600,9 @@ void tclacClimate::dataShow(bool flow, bool shine) {
 	}
 }
 
-// Действия с данными из конфига
+// Aktionen mit Daten aus der Konfiguration
 
-// Получение состояния пищалки
+// Status des Summers übernehmen
 void tclacClimate::set_beeper_state(bool state) {
 	this->beeper_status_ = state;
 	if (force_mode_status_){
@@ -616,7 +611,7 @@ void tclacClimate::set_beeper_state(bool state) {
 		}
 	}
 }
-// Получение состояния дисплея кондиционера
+// Status des Klimaanlagen-Displays übernehmen
 void tclacClimate::set_display_state(bool disp_state) {
 	this->display_status_ = disp_state;
 	if (force_mode_status_){
@@ -625,27 +620,27 @@ void tclacClimate::set_display_state(bool disp_state) {
 		}
 	}
 }
-// Получение состояния режима принудительного применения настроек
+// Status des erzwungenen Anwendens von Einstellungen übernehmen
 void tclacClimate::set_force_mode_state(bool f_state) {
 	this->force_mode_status_ = f_state;
 }
-// Получение пина светодиода приема данных
+// Pin der Empfangs-LED übernehmen
 #ifdef CONF_RX_LED
 void tclacClimate::set_rx_led_pin(GPIOPin *rx_led_pin) {
 	this->rx_led_pin_ = rx_led_pin;
 }
 #endif
-// Получение пина светодиода передачи данных
+// Pin der Sende-LED übernehmen
 #ifdef CONF_TX_LED
 void tclacClimate::set_tx_led_pin(GPIOPin *tx_led_pin) {
 	this->tx_led_pin_ = tx_led_pin;
 }
 #endif
-// Получение состояния светодиодов связи модуля
+// Status der Modul-Kommunikations-LEDs übernehmen
 void tclacClimate::set_module_display_state(bool d_state) {
 	this->module_display_status_ = d_state;
 }
-// Получение режима фиксации вертикальной заслонки
+// Fixiermodus der vertikalen Lamelle übernehmen
 void tclacClimate::set_vertical_airflow(AirflowVerticalDirection v_airflow) {
 	this->vertical_direction_ = v_airflow;
 	if (force_mode_status_){
@@ -654,7 +649,7 @@ void tclacClimate::set_vertical_airflow(AirflowVerticalDirection v_airflow) {
 		}
 	}
 }
-// Получение режима фиксации горизонтальных заслонок
+// Fixiermodus der horizontalen Lamellen übernehmen
 void tclacClimate::set_horizontal_airflow(AirflowHorizontalDirection h_airflow) {
 	this->horizontal_direction_ = h_airflow;
 	if (force_mode_status_){
@@ -663,7 +658,7 @@ void tclacClimate::set_horizontal_airflow(AirflowHorizontalDirection h_airflow) 
 		}
 	}
 }
-// Получение режима качания вертикальной заслонки
+// Swing-Modus der vertikalen Lamelle übernehmen
 void tclacClimate::set_vertical_swing_direction(VerticalSwingDirection vs_direction) {
 	this->vertical_swing_direction_ = vs_direction;
 	if (force_mode_status_){
@@ -672,12 +667,12 @@ void tclacClimate::set_vertical_swing_direction(VerticalSwingDirection vs_direct
 		}
 	}
 }
-// Получение доступных режимов работы кондиционера
+// Verfügbare Betriebsmodi der Klimaanlage übernehmen
 void tclacClimate::set_supported_modes(climate::ClimateModeMask modes) {
 	this->supported_modes_ = modes;
 	ESP_LOGD("TCL", "Set up Modes");
 }
-// Получение режима качания горизонтальных заслонок
+// Swing-Modus der horizontalen Lamellen übernehmen
 void tclacClimate::set_horizontal_swing_direction(HorizontalSwingDirection hs_direction) {
 	horizontal_swing_direction_ = hs_direction;
 	if (force_mode_status_){
@@ -686,15 +681,15 @@ void tclacClimate::set_horizontal_swing_direction(HorizontalSwingDirection hs_di
 		}
 	}
 }
-// Получение доступных скоростей вентилятора
+// Verfügbare Lüftergeschwindigkeiten übernehmen
 void tclacClimate::set_supported_fan_modes(climate::ClimateFanModeMask fan_modes){
 	this->supported_fan_modes_ = fan_modes;
 }
-// Получение доступных режимов качания заслонок
+// Verfügbare Swing-Modi der Lamellen übernehmen
 void tclacClimate::set_supported_swing_modes(climate::ClimateSwingModeMask swing_modes) {
 	this->supported_swing_modes_ = swing_modes;
 }
-// Получение доступных предустановок
+// Verfügbare Presets übernehmen
 void tclacClimate::set_supported_presets(climate::ClimatePresetMask presets) {
   this->supported_presets_ = presets;
 }
