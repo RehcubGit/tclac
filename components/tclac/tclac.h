@@ -85,13 +85,13 @@ enum class AirflowHorizontalDirection : uint8_t {
 class tclacClimate : public climate::Climate, public esphome::uart::UARTDevice, public PollingComponent {
 
 	private:
-		byte checksum;
+		uint8_t checksum;
 		// dataTX с управлением состоит из 38 байт
-		byte dataTX[38];
+		uint8_t dataTX[38];
 		// А dataRX по прежнему из 61 байта
-		byte dataRX[61];
+		uint8_t dataRX[61];
 		// Команда запроса состояния
-		byte poll[8] = {0xBB,0x00,0x01,0x04,0x02,0x01,0x00,0xBD};
+		uint8_t poll[8] = {0xBB,0x00,0x01,0x04,0x02,0x01,0x00,0xBD};
 		// Инициализация и начальное наполнение переменных состоянй переключателей
 		bool beeper_status_;
 		bool display_status_;
@@ -119,37 +119,37 @@ class tclacClimate : public climate::Climate, public esphome::uart::UARTDevice, 
 		void setup() override;
 		void update() override;
 		void set_beeper_state(bool state);
-		void set_display_state(bool state);
+		void set_display_state(bool disp_state);
 		void dataShow(bool flow, bool shine);
-		void set_force_mode_state(bool state);
+		void set_force_mode_state(bool f_state);
 		void set_rx_led_pin(GPIOPin *rx_led_pin);
 		void set_tx_led_pin(GPIOPin *tx_led_pin);
-		void sendData(byte * message, byte size);
-		void set_module_display_state(bool state);
-		static String getHex(byte *message, byte size);
-		void control(const ClimateCall &call) override;
-		static byte getChecksum(const byte * message, size_t size);
-		void set_vertical_airflow(AirflowVerticalDirection direction);
-		void set_horizontal_airflow(AirflowHorizontalDirection direction);
-		void set_vertical_swing_direction(VerticalSwingDirection direction);
-		void set_horizontal_swing_direction(HorizontalSwingDirection direction);
+		void sendData(uint8_t * message, uint8_t size);
+		void set_module_display_state(bool d_state);
+		static String getHex(uint8_t *message, uint8_t size);
+		static uint8_t getChecksum(const uint8_t * message, size_t size);
+		void set_vertical_airflow(AirflowVerticalDirection v_airflow);
+		void set_horizontal_airflow(AirflowHorizontalDirection h_airflow);
+		void set_vertical_swing_direction(VerticalSwingDirection vs_direction);
+		void set_horizontal_swing_direction(HorizontalSwingDirection hs_direction);
 		void set_supported_presets(climate::ClimatePresetMask presets);
 		void set_supported_modes(climate::ClimateModeMask modes);
-		void set_supported_fan_modes(climate::ClimateFanModeMask modes);
-		void set_supported_swing_modes(climate::ClimateSwingModeMask modes);
+		void set_supported_fan_modes(climate::ClimateFanModeMask fan_modes);
+		void set_supported_swing_modes(climate::ClimateSwingModeMask swing_modes);
 		
 	protected:
 		GPIOPin *rx_led_pin_;
 		GPIOPin *tx_led_pin_;
 		ClimateTraits traits() override;
 		climate::ClimateModeMask supported_modes_{};
-		climate::ClimatePresetMask supported_presets_{};
 		AirflowVerticalDirection vertical_direction_;
-		climate::ClimateFanModeMask supported_fan_modes_{};
+		climate::ClimatePresetMask supported_presets_{};
 		AirflowHorizontalDirection horizontal_direction_;
 		VerticalSwingDirection vertical_swing_direction_;
-		climate::ClimateSwingModeMask supported_swing_modes_{};
+		climate::ClimateFanModeMask supported_fan_modes_{};
 		HorizontalSwingDirection horizontal_swing_direction_;
+		climate::ClimateSwingModeMask supported_swing_modes_{};
+		void control(const climate::ClimateCall &call) override;
 };
 }
 }
