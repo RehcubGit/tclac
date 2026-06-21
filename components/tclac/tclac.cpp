@@ -56,7 +56,7 @@ void tclacClimate::loop()  {
 		dataRX[0] = esphome::uart::UARTDevice::read();
 		// Если принятый байт- не заголовок (0xBB), то просто покидаем цикл
 		if (dataRX[0] != 0xBB) {
-			ESP_LOGD("TCL", "Wrong byte");
+			ESP_LOGD("TCL", "Wrong byte: %x", dataRX[0]);
 			dataShow(0,0);
 			return;
 		}
@@ -70,9 +70,12 @@ void tclacClimate::loop()  {
 		delay(5);
 		dataRX[4] = esphome::uart::UARTDevice::read();
 
-		//auto raw = getHex(dataRX, 5);
+		auto raw = getHex(dataRX, 5);
 		
-		//ESP_LOGD("TCL", "first 5 byte : %s ", raw.c_str());
+		ESP_LOGD("TCL", "first 5 byte : %s ", raw.c_str());
+
+		// Logging the message
+
 
 		// Из первых 5 байт нам нужен пятый- он содержит длину сообщения
 		esphome::uart::UARTDevice::read_array(dataRX+5, dataRX[4]+1);
