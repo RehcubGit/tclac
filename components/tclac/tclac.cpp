@@ -77,13 +77,13 @@ void tclacClimate::loop()  {
 	}
 	// Wenn der Header (0x2A) passt, lesen wir anschließend weitere 4 Bytes
 	// Bei manchen Klimaanlagen muss zwischen Paketen delay(5) gesetzt werden. Warum unklar, aber gelegentlich notwendig.
-	// delay(5);
+	delay(5);
 	dataRX[1] = esphome::uart::UARTDevice::read();
-	// delay(5);
+	delay(5);
 	dataRX[2] = esphome::uart::UARTDevice::read();
-	// delay(5);
+	delay(5);
 	dataRX[3] = esphome::uart::UARTDevice::read();
-	// delay(5);
+	delay(5);
 	dataRX[4] = esphome::uart::UARTDevice::read();
 
 	// Von den ersten 5 Bytes benötigen wir das fünfte: Es enthält die Nachrichtenlänge
