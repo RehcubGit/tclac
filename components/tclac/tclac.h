@@ -16,6 +16,8 @@
 namespace esphome {
 namespace tclac {
 
+#define HEADER_BYTE		0x2A
+
 #define SET_TEMP_MASK	0b00001111
 
 #define MODE_POS		7

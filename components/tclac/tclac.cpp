@@ -69,13 +69,13 @@ void tclacClimate::loop()  {
 	dataRX[0] = esphome::uart::UARTDevice::read();
 	ESP_LOGD("TCL", "Message received: %x", dataRX[0]);
 
-	// Wenn das empfangene Byte kein Header ist (0xBB), verlassen wir die Schleife
-	if (dataRX[0] != 0xBB) {
+	// Wenn das empfangene Byte kein Header ist (0x2A), verlassen wir die Schleife
+	if (dataRX[0] != HEADER_BYTE) {
 		ESP_LOGD("TCL", "Wrong byte");
 		dataShow(0,0);
 		return;
 	}
-	// Wenn der Header (0xBB) passt, lesen wir anschließend weitere 4 Bytes
+	// Wenn der Header (0x2A) passt, lesen wir anschließend weitere 4 Bytes
 	// Bei manchen Klimaanlagen muss zwischen Paketen delay(5) gesetzt werden. Warum unklar, aber gelegentlich notwendig.
 	// delay(5);
 	dataRX[1] = esphome::uart::UARTDevice::read();
@@ -499,7 +499,7 @@ void tclacClimate::takeControl() {
 	dataTX[9] = target_temperature_set;
 		
 	// Byte-Array für das Senden an die Klimaanlage zusammenbauen
-	dataTX[0] = 0xBB;	// Start-Header-Byte
+	dataTX[0] = HEADER_BYTE;	// Start-Header-Byte
 	dataTX[1] = 0x00;	// Start-Header-Byte
 	dataTX[2] = 0x01;	// Start-Header-Byte
 	dataTX[3] = 0x03;	// 0x03 - Steuerung, 0x04 - Abfrage
