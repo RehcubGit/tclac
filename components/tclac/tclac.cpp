@@ -67,11 +67,15 @@ void tclacClimate::loop()  {
 	dataShow(0, true);
 
 	dataRX[0] = esphome::uart::UARTDevice::read();
+	
+	// if (dataRX[0] == 0xF9 || dataRX[0] == 0xC4)
+	// 	return;
+	
 	ESP_LOGD("TCL", "Message received: %x", dataRX[0]);
 
 	// Wenn das empfangene Byte kein Header ist (0x2A), verlassen wir die Schleife
 	if (dataRX[0] != HEADER_BYTE) {
-		ESP_LOGD("TCL", "Wrong byte");
+		// ESP_LOGD("TCL", "Wrong byte");
 		dataShow(0,0);
 		return;
 	}
@@ -91,12 +95,12 @@ void tclacClimate::loop()  {
 
 	uint8_t check = getChecksum(dataRX, sizeof(dataRX));
 
-	auto raw = getHex(dataRX, sizeof(dataRX));	
-	ESP_LOGD("TCL", "RX full : %s ", raw.c_str());
+	// auto raw = getHex(dataRX, sizeof(dataRX));	
+	// ESP_LOGD("TCL", "RX full : %s ", raw.c_str());
 	
 	// Prüfen der Prüfsumme
 	if (check != dataRX[60]) {
-		ESP_LOGD("TCL", "Invalid checksum %x", check);
+		// ESP_LOGD("TCL", "Invalid checksum %x", check);
 		this->dataShow(0,0);
 		return;
 	}
